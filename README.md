@@ -16,3 +16,13 @@ The tutorial emphasizes the following topics:
 * Alpha blending
 
 This repository is used to follow after the tutorial step by step.
+
+Configuration
+------------------
+
+The following configuration is used for the project.
+
+* Windows Game 3.1 project
+* XNA 3.1 Framework
+* .NET Framework 3.5
+* Visual Studio 2008, 9.0.30729.1 SP
