@@ -20,6 +20,9 @@ namespace XNAseries2
         Effect effect;
         Matrix viewMatrix;
         Matrix projectionMatrix;
+        Texture2D texture;
+        VertexPositionTexture[] vertices;
+        VertexDeclaration texturedVertexDeclaration;
 
         public Game1()
         {
@@ -41,7 +44,9 @@ namespace XNAseries2
         {
             device = graphics.GraphicsDevice;
             effect = Content.Load<Effect>("effects");
+            texture = Content.Load<Texture2D>("riemerstexture");
             SetUpCamera();
+            SetUpVertices();
         }
 
         private void SetUpCamera()
@@ -68,7 +73,56 @@ namespace XNAseries2
         protected override void Draw(GameTime gameTime)
         {
             device.Clear(ClearOptions.Target | ClearOptions.DepthBuffer, Color.DarkSlateBlue, 1.0f, 0);
+            Matrix worldMatrix = Matrix.Identity;
+            effect.CurrentTechnique = effect.Techniques["Textured"];
+            effect.Parameters["xWorld"].SetValue(worldMatrix);
+            effect.Parameters["xView"].SetValue(viewMatrix);
+            effect.Parameters["xProjection"].SetValue(projectionMatrix);
+            effect.Parameters["xTexture"].SetValue(texture);
+            effect.Begin();
+            foreach (EffectPass pass in effect.CurrentTechnique.Passes)
+            {
+                pass.Begin();
+
+                device.VertexDeclaration = texturedVertexDeclaration;
+                device.DrawUserPrimitives(PrimitiveType.TriangleList, vertices, 0, 2);
+
+                pass.End();
+            }
+            effect.End();
             base.Draw(gameTime);
         }
+
+        private void SetUpVertices()
+        {
+            vertices = new VertexPositionTexture[6];
+
+            vertices[0].Position = new Vector3(-10f, 10f, 0f);
+            vertices[0].TextureCoordinate.X = 0;
+            vertices[0].TextureCoordinate.Y = 0;
+
+            vertices[1].Position = new Vector3(10f, -10f, 0f);
+            vertices[1].TextureCoordinate.X = 1;
+            vertices[1].TextureCoordinate.Y = 1;
+
+            vertices[2].Position = new Vector3(-10f, -10f, 0f);
+            vertices[2].TextureCoordinate.X = 0;
+            vertices[2].TextureCoordinate.Y = 1;
+
+            vertices[3].Position = new Vector3(10.1f, -9.9f, 0f);
+            vertices[3].TextureCoordinate.X = 1;
+            vertices[3].TextureCoordinate.Y = 1;
+
+            vertices[4].Position = new Vector3(-9.9f, 10.1f, 0f);
+            vertices[4].TextureCoordinate.X = 0;
+            vertices[4].TextureCoordinate.Y = 0;
+
+            vertices[5].Position = new Vector3(10.1f, 10.1f, 0f);
+            vertices[5].TextureCoordinate.X = 1;
+            vertices[5].TextureCoordinate.Y = 0;
+
+            texturedVertexDeclaration = new VertexDeclaration(device, VertexPositionTexture.VertexElements);
+        }
+
     }
 }
