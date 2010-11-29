@@ -20,8 +20,10 @@ namespace XNAseries2
         Effect effect;
         Matrix viewMatrix;
         Matrix projectionMatrix;
-        Texture2D texture;
-        VertexPositionTexture[] vertices;
+        Texture2D sceneryTexture;
+        int[,] floorPlan;
+
+        VertexBuffer cityVertexBuffer;
         VertexDeclaration texturedVertexDeclaration;
 
         public Game1()
@@ -37,6 +39,9 @@ namespace XNAseries2
             graphics.IsFullScreen = false;
             graphics.ApplyChanges();
             Window.Title = "Riemer's XNA Tutorials -- Series 2 -- Flightsimulator";
+
+            LoadFloorPlan();
+
             base.Initialize();
         }
 
@@ -44,14 +49,14 @@ namespace XNAseries2
         {
             device = graphics.GraphicsDevice;
             effect = Content.Load<Effect>("effects");
-            texture = Content.Load<Texture2D>("riemerstexture");
+            sceneryTexture = Content.Load<Texture2D>("texturemap");
             SetUpCamera();
             SetUpVertices();
         }
 
         private void SetUpCamera()
         {
-            viewMatrix = Matrix.CreateLookAt(new Vector3(0, 0, 30), new Vector3(0, 0, 0), new Vector3(0, 1, 0));
+            viewMatrix = Matrix.CreateLookAt(new Vector3(3, 5, 2), new Vector3(2, 0, -1), new Vector3(0, 1, 0));
             projectionMatrix = Matrix.CreatePerspectiveFieldOfView(MathHelper.PiOver4, device.Viewport.AspectRatio, 0.2f, 500.0f);
         }
 
@@ -73,56 +78,72 @@ namespace XNAseries2
         protected override void Draw(GameTime gameTime)
         {
             device.Clear(ClearOptions.Target | ClearOptions.DepthBuffer, Color.DarkSlateBlue, 1.0f, 0);
-            Matrix worldMatrix = Matrix.Identity;
-            effect.CurrentTechnique = effect.Techniques["Textured"];
-            effect.Parameters["xWorld"].SetValue(worldMatrix);
-            effect.Parameters["xView"].SetValue(viewMatrix);
-            effect.Parameters["xProjection"].SetValue(projectionMatrix);
-            effect.Parameters["xTexture"].SetValue(texture);
-            effect.Begin();
-            foreach (EffectPass pass in effect.CurrentTechnique.Passes)
-            {
-                pass.Begin();
 
-                device.VertexDeclaration = texturedVertexDeclaration;
-                device.DrawUserPrimitives(PrimitiveType.TriangleList, vertices, 0, 2);
+            DrawCity();
 
-                pass.End();
-            }
-            effect.End();
             base.Draw(gameTime);
         }
 
         private void SetUpVertices()
         {
-            vertices = new VertexPositionTexture[6];
+            int cityWidth = floorPlan.GetLength(0);
+            int cityLength = floorPlan.GetLength(1);
+            int imagesInTexture = 11;
 
-            vertices[0].Position = new Vector3(-10f, 10f, 0f);
-            vertices[0].TextureCoordinate.X = 0;
-            vertices[0].TextureCoordinate.Y = 0;
+            List<VertexPositionNormalTexture> verticesList = new List<VertexPositionNormalTexture>();
+            for (int x = 0; x < cityWidth; x++)
+            {
+                for (int z = 0; z < cityLength; z++)
+                {
+                    // If the floor plan contains a 0 for this tile
+                    // then add 2 triangles (6 vertices).
+                    if (floorPlan[x,z] == 0)
+                    {
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x, 0, -z),         new Vector3(0, 1, 0), new Vector2(0, 1)));
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x, 0, -z - 1),     new Vector3(0, 1, 0), new Vector2(0, 0)));
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x + 1, 0, -z),     new Vector3(0, 1, 0), new Vector2(1.0f / imagesInTexture, 1)));
 
-            vertices[1].Position = new Vector3(10f, -10f, 0f);
-            vertices[1].TextureCoordinate.X = 1;
-            vertices[1].TextureCoordinate.Y = 1;
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x, 0, -z - 1),     new Vector3(0, 1, 0), new Vector2(0, 0)));
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x + 1, 0, -z - 1), new Vector3(0, 1, 0), new Vector2(1.0f / imagesInTexture, 0)));
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x + 1, 0, -z),     new Vector3(0, 1, 0), new Vector2(1.0f / imagesInTexture, 1)));
+                    }
+                }
+            }
 
-            vertices[2].Position = new Vector3(-10f, -10f, 0f);
-            vertices[2].TextureCoordinate.X = 0;
-            vertices[2].TextureCoordinate.Y = 1;
+            cityVertexBuffer = new VertexBuffer(device, verticesList.Count * VertexPositionNormalTexture.SizeInBytes, BufferUsage.WriteOnly);
 
-            vertices[3].Position = new Vector3(10.1f, -9.9f, 0f);
-            vertices[3].TextureCoordinate.X = 1;
-            vertices[3].TextureCoordinate.Y = 1;
-
-            vertices[4].Position = new Vector3(-9.9f, 10.1f, 0f);
-            vertices[4].TextureCoordinate.X = 0;
-            vertices[4].TextureCoordinate.Y = 0;
-
-            vertices[5].Position = new Vector3(10.1f, 10.1f, 0f);
-            vertices[5].TextureCoordinate.X = 1;
-            vertices[5].TextureCoordinate.Y = 0;
-
-            texturedVertexDeclaration = new VertexDeclaration(device, VertexPositionTexture.VertexElements);
+            cityVertexBuffer.SetData<VertexPositionNormalTexture>(verticesList.ToArray());
+            texturedVertexDeclaration = new VertexDeclaration(device, VertexPositionNormalTexture.VertexElements);
         }
 
+        private void LoadFloorPlan()
+        {
+            // Every 1 indicates a building.
+            floorPlan = new int[,]
+            {
+                {0,0,0},
+                {0,1,0},
+                {0,0,0},
+            };
+        }
+
+        private void DrawCity()
+        {
+            effect.CurrentTechnique = effect.Techniques["Textured"];
+            effect.Parameters["xWorld"].SetValue(Matrix.Identity);
+            effect.Parameters["xView"].SetValue(viewMatrix);
+            effect.Parameters["xProjection"].SetValue(projectionMatrix);
+            effect.Parameters["xTexture"].SetValue(sceneryTexture);
+            effect.Begin();
+            foreach (EffectPass pass in effect.CurrentTechnique.Passes)
+            {
+                pass.Begin();
+                device.VertexDeclaration = texturedVertexDeclaration;
+                device.Vertices[0].SetSource(cityVertexBuffer, 0, VertexPositionNormalTexture.SizeInBytes);
+                device.DrawPrimitives(PrimitiveType.TriangleList, 0, cityVertexBuffer.SizeInBytes / VertexPositionNormalTexture.SizeInBytes / 3);
+                pass.End();
+            }
+            effect.End();
+        }
     }
 }

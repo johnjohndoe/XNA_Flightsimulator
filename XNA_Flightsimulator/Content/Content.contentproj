@@ -45,8 +45,8 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="riemerstexture.bmp">
-      <Name>riemerstexture</Name>
+    <Compile Include="texturemap.jpg">
+      <Name>texturemap</Name>
       <Importer>TextureImporter</Importer>
       <Processor>TextureProcessor</Processor>
     </Compile>
