@@ -3,7 +3,7 @@ XNA Flightsimulator
 
 The tutorial was created by Riemer Grootjans. All texts and materials can be found here:
 
-* http://www.riemers.net/eng/Tutorials/XNA/Csharp/series2.php
+* [Riemer's XNA Tutorials for C# -- Series 2](http://www.riemers.net/eng/Tutorials/XNA/Csharp/series2.php)
 
 The tutorial emphasizes the following topics:
 
