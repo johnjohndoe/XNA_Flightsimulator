@@ -56,6 +56,12 @@ namespace XNAseries2
 
         protected override void Update(GameTime gameTime)
         {
+            KeyboardState keyState = Keyboard.GetState();
+
+            // Allows to exit the game.
+            if (keyState.IsKeyDown(Keys.Escape))
+                this.Exit();
+
             base.Update(gameTime);
         }
 
