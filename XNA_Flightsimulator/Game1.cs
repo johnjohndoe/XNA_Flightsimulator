@@ -16,6 +16,31 @@ namespace XNAseries2
     {
         enum CollisionType { None, Building, Boundary, Target }
 
+        struct Bullet
+        {
+            public Vector3 position;
+            public Quaternion rotation;
+        }
+
+        private struct VertexPointSprite
+        {
+            private Vector3 position;
+            private float pointSize;
+
+            public VertexPointSprite(Vector3 position, float pointSize)
+            {
+                this.position = position;
+                this.pointSize = pointSize;
+            }
+
+            public static readonly VertexElement[] VertexElements =
+            {
+                new VertexElement(0, 0, VertexElementFormat.Vector3, VertexElementMethod.Default, VertexElementUsage.Position, 0),
+                new VertexElement(0, sizeof(float)*3, VertexElementFormat.Single, VertexElementMethod.Default, VertexElementUsage.PointSize, 0),
+            };
+            public static int SizeInBytes = sizeof(float) * (3 + 1);
+        }
+
         GraphicsDeviceManager graphics;
         GraphicsDevice device;
 
@@ -41,9 +66,14 @@ namespace XNAseries2
 
         VertexBuffer cityVertexBuffer;
         VertexDeclaration texturedVertexDeclaration;
+        VertexDeclaration pointSpriteVertexDeclaration;
 
         BoundingBox[] buildingBoundingBoxes;
         BoundingBox completeCityBox;
+
+        Texture2D bulletTexture;
+        List<Bullet> bulletList = new List<Bullet>();
+        double lastBulletTime = 0;
 
         public Game1()
         {
@@ -70,10 +100,12 @@ namespace XNAseries2
         protected override void LoadContent()
         {
             device = graphics.GraphicsDevice;
+            pointSpriteVertexDeclaration = new VertexDeclaration(device, VertexPointSprite.VertexElements);
             effect = Content.Load<Effect>("effects");
             sceneryTexture = Content.Load<Texture2D>("texturemap");
             xwingModel = LoadModel("xwing");
             targetModel = LoadModel("target");
+            bulletTexture = Content.Load<Texture2D>("bullet");
             SetUpCamera();
             SetUpVertices();
         }
@@ -127,6 +159,7 @@ namespace XNAseries2
             }
 
             UpdateCamera();
+            UpdateBulletPositions(moveSpeed);
 
             base.Update(gameTime);
         }
@@ -138,6 +171,7 @@ namespace XNAseries2
             DrawCity();
             DrawModel();
             DrawTargets();
+            DrawBullets();
 
             base.Draw(gameTime);
         }
@@ -336,6 +370,20 @@ namespace XNAseries2
             Quaternion additionalRotation = Quaternion.CreateFromAxisAngle(new Vector3(0, 0, -1), leftRightRotation) * Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), upDownRotation);
             xwingRotation *= additionalRotation;
 
+            // Generate bullets.
+            if (keys.IsKeyDown(Keys.Space))
+            {
+                double currentTime = gameTime.TotalGameTime.TotalMilliseconds;
+                if (currentTime - lastBulletTime > 100)
+                {
+                    Bullet newBullet = new Bullet();
+                    newBullet.position = xwingPosition;
+                    newBullet.rotation = xwingRotation;
+                    bulletList.Add(newBullet);
+
+                    lastBulletTime = currentTime;
+                }
+            }
         }
 
         private void MoveForward(ref Vector3 position, Quaternion rotationQuat, float speed)
@@ -448,5 +496,48 @@ namespace XNAseries2
                 }
             }
         }
+
+        private void UpdateBulletPositions(float moveSpeed)
+        {
+            for (int i = 0; i < bulletList.Count; i++)
+            {
+                Bullet currentBullet = bulletList[i];
+                // The speed is set relative to the speed of the X-Wing.
+                MoveForward(ref currentBullet.position, currentBullet.rotation, moveSpeed * 2.0f);
+                bulletList[i] = currentBullet;
+            }
+        }
+
+        private void DrawBullets()
+        {
+            if (bulletList.Count > 0)
+            {
+                VertexPointSprite[] spriteArray = new VertexPointSprite[bulletList.Count];
+                for (int i = 0; i < bulletList.Count; i++)
+                    spriteArray[i] = new VertexPointSprite(bulletList[i].position, 50);
+
+                effect.CurrentTechnique = effect.Techniques["PointSprites"];
+                Matrix worldMatrix = Matrix.Identity;
+                effect.Parameters["xWorld"].SetValue(worldMatrix);
+                effect.Parameters["xView"].SetValue(viewMatrix);
+                effect.Parameters["xProjection"].SetValue(projectionMatrix);
+                effect.Parameters["xTexture"].SetValue(bulletTexture);
+
+                device.RenderState.PointSpriteEnable = true;
+
+                effect.Begin();
+                foreach (EffectPass pass in effect.CurrentTechnique.Passes)
+                {
+                    pass.Begin();
+                    device.VertexDeclaration = pointSpriteVertexDeclaration;
+                    device.DrawUserPrimitives(PrimitiveType.PointList, spriteArray, 0, spriteArray.Length);
+                    pass.End();
+                }
+                effect.End();
+
+                device.RenderState.PointSpriteEnable = false;
+            }
+        }
+
     }
 }
