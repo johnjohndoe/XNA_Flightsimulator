@@ -505,6 +505,18 @@ namespace XNAseries2
                 // The speed is set relative to the speed of the X-Wing.
                 MoveForward(ref currentBullet.position, currentBullet.rotation, moveSpeed * 2.0f);
                 bulletList[i] = currentBullet;
+
+                // Check if bullets hit target.
+                BoundingSphere bulletSphere = new BoundingSphere(currentBullet.position, 0.05f);
+                CollisionType collisionType = CheckCollision(bulletSphere);
+                if (collisionType != CollisionType.None)
+                {
+                    bulletList.RemoveAt(i);
+                    i--;
+
+                    if (collisionType == CollisionType.Target)
+                        gameSpeed *= 1.05f;
+                }
             }
         }
 
@@ -522,6 +534,9 @@ namespace XNAseries2
                 effect.Parameters["xView"].SetValue(viewMatrix);
                 effect.Parameters["xProjection"].SetValue(projectionMatrix);
                 effect.Parameters["xTexture"].SetValue(bulletTexture);
+                device.RenderState.AlphaBlendEnable = true;
+                device.RenderState.SourceBlend = Blend.One;
+                device.RenderState.DestinationBlend = Blend.One;
 
                 device.RenderState.PointSpriteEnable = true;
 
@@ -536,6 +551,7 @@ namespace XNAseries2
                 effect.End();
 
                 device.RenderState.PointSpriteEnable = false;
+                device.RenderState.AlphaBlendEnable = false;
             }
         }
 
