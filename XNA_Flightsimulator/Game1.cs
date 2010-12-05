@@ -18,6 +18,7 @@ namespace XNAseries2
         GraphicsDevice device;
 
         Effect effect;
+        Vector3 lightDirection = new Vector3(3, -2, 5);
         Matrix viewMatrix;
         Matrix projectionMatrix;
         Texture2D sceneryTexture;
@@ -43,6 +44,7 @@ namespace XNAseries2
             Window.Title = "Riemer's XNA Tutorials -- Series 2 -- Flightsimulator";
 
             LoadFloorPlan();
+            lightDirection.Normalize();
 
             base.Initialize();
         }
@@ -201,6 +203,9 @@ namespace XNAseries2
             effect.Parameters["xView"].SetValue(viewMatrix);
             effect.Parameters["xProjection"].SetValue(projectionMatrix);
             effect.Parameters["xTexture"].SetValue(sceneryTexture);
+            effect.Parameters["xEnableLighting"].SetValue(true);
+            effect.Parameters["xLightDirection"].SetValue(lightDirection);
+            effect.Parameters["xAmbient"].SetValue(0.5f);
             effect.Begin();
             foreach (EffectPass pass in effect.CurrentTechnique.Passes)
             {
@@ -246,6 +251,9 @@ namespace XNAseries2
                     currentEffect.Parameters["xWorld"].SetValue(xwingTransforms[mesh.ParentBone.Index] * worldMatrix);
                     currentEffect.Parameters["xView"].SetValue(viewMatrix);
                     currentEffect.Parameters["xProjection"].SetValue(projectionMatrix);
+                    currentEffect.Parameters["xEnableLighting"].SetValue(true);
+                    currentEffect.Parameters["xLightDirection"].SetValue(lightDirection);
+                    currentEffect.Parameters["xAmbient"].SetValue(0.5f);
                 }
                 mesh.Draw();
             }
