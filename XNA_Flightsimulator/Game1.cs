@@ -23,6 +23,11 @@ namespace XNAseries2
         Matrix projectionMatrix;
         Texture2D sceneryTexture;
         Model xwingModel;
+        // Position for the model.
+        // Rotate the model by 180 degrees.
+        // Note: XNA takes the negative z-axis as forward.
+        Vector3 xwingPosition = new Vector3(8, 1, -3);
+        Quaternion xwingRotation = Quaternion.Identity;
         int[,] floorPlan;
         int[] buildingHeights = new int[] { 0, 2, 2, 6, 5, 4 };
 
@@ -65,6 +70,21 @@ namespace XNAseries2
             projectionMatrix = Matrix.CreatePerspectiveFieldOfView(MathHelper.PiOver4, device.Viewport.AspectRatio, 0.2f, 500.0f);
         }
 
+        private void UpdateCamera()
+        {
+            // Camera position relative to the model.
+            Vector3 cameraPosition = new Vector3(0, 0.1f, 0.6f);
+            // Transform the camera position to correctly align with the model.
+            cameraPosition = Vector3.Transform(cameraPosition, Matrix.CreateFromQuaternion(xwingRotation));
+            cameraPosition += xwingPosition;
+
+            Vector3 cameraUpVector = new Vector3(0, 1, 0);
+            cameraUpVector = Vector3.Transform(cameraUpVector, Matrix.CreateFromQuaternion(xwingRotation));
+
+            viewMatrix = Matrix.CreateLookAt(cameraPosition, xwingPosition, cameraUpVector);
+            projectionMatrix = Matrix.CreatePerspectiveFieldOfView(MathHelper.PiOver4, device.Viewport.AspectRatio, 0.2f, 500.0f);
+        }
+
         protected override void UnloadContent()
         {
         }
@@ -77,6 +97,7 @@ namespace XNAseries2
             if (keyState.IsKeyDown(Keys.Escape))
                 this.Exit();
 
+            UpdateCamera();
             base.Update(gameTime);
         }
 
@@ -235,10 +256,12 @@ namespace XNAseries2
         private void DrawModel()
         {
             // Create world matrix to render the model with the following properties.
-            // Down size the model.
-            // Rotate the model by 180 degrees.
+            // 1) Scale the model.
+            // 2) Rotate the model by 180 degrees.
             // Note: XNA takes the negative z-axis as forward.
-            Matrix worldMatrix = Matrix.CreateScale(0.0005f, 0.0005f, 0.0005f) * Matrix.CreateRotationY(MathHelper.Pi) * Matrix.CreateTranslation(new Vector3(19, 12, -5));
+            // 3) Rotate the model as defined by the quaternion.
+            // 4) Translate the model.
+            Matrix worldMatrix = Matrix.CreateScale(0.0005f, 0.0005f, 0.0005f) * Matrix.CreateRotationY(MathHelper.Pi) * Matrix.CreateFromQuaternion(xwingRotation) * Matrix.CreateTranslation(xwingPosition);
 
             // Render the model parts at their correct positions (based on the bones matrices).
             Matrix[] xwingTransforms = new Matrix[xwingModel.Bones.Count];
