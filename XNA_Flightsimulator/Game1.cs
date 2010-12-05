@@ -56,6 +56,7 @@ namespace XNAseries2
         static Vector3 initialXwingPosition = new Vector3(8, 1, -3);
         Vector3 xwingPosition = initialXwingPosition;
         Quaternion xwingRotation = Quaternion.Identity;
+        Quaternion cameraRotation = Quaternion.Identity;
         int[,] floorPlan;
         int[] buildingHeights = new int[] { 0, 2, 2, 6, 5, 4 };
 
@@ -122,14 +123,18 @@ namespace XNAseries2
 
         private void UpdateCamera()
         {
+            // Adjust the camera delay.
+            // Each frame the camera rotation gets closer to the X-Wing rotation by 10%.
+            cameraRotation = Quaternion.Lerp(cameraRotation, xwingRotation, 0.1f);
+
             // Camera position relative to the model.
             Vector3 cameraPosition = new Vector3(0, 0.1f, 0.6f);
             // Transform the camera position to correctly align with the model.
-            cameraPosition = Vector3.Transform(cameraPosition, Matrix.CreateFromQuaternion(xwingRotation));
+            cameraPosition = Vector3.Transform(cameraPosition, Matrix.CreateFromQuaternion(cameraRotation));
             cameraPosition += xwingPosition;
 
             Vector3 cameraUpVector = new Vector3(0, 1, 0);
-            cameraUpVector = Vector3.Transform(cameraUpVector, Matrix.CreateFromQuaternion(xwingRotation));
+            cameraUpVector = Vector3.Transform(cameraUpVector, Matrix.CreateFromQuaternion(cameraRotation));
 
             viewMatrix = Matrix.CreateLookAt(cameraPosition, xwingPosition, cameraUpVector);
             projectionMatrix = Matrix.CreatePerspectiveFieldOfView(MathHelper.PiOver4, device.Viewport.AspectRatio, 0.2f, 500.0f);
