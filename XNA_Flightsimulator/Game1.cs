@@ -14,6 +14,8 @@ namespace XNAseries2
 {
     public class Game1 : Microsoft.Xna.Framework.Game
     {
+        enum CollisionType { None, Building, Boundary, Target }
+
         GraphicsDeviceManager graphics;
         GraphicsDevice device;
 
@@ -26,7 +28,8 @@ namespace XNAseries2
         // Position for the model.
         // Rotate the model by 180 degrees.
         // Note: XNA takes the negative z-axis as forward.
-        Vector3 xwingPosition = new Vector3(8, 1, -3);
+        static Vector3 initialXwingPosition = new Vector3(8, 1, -3);
+        Vector3 xwingPosition = initialXwingPosition;
         Quaternion xwingRotation = Quaternion.Identity;
         int[,] floorPlan;
         int[] buildingHeights = new int[] { 0, 2, 2, 6, 5, 4 };
@@ -35,6 +38,9 @@ namespace XNAseries2
 
         VertexBuffer cityVertexBuffer;
         VertexDeclaration texturedVertexDeclaration;
+
+        BoundingBox[] buildingBoundingBoxes;
+        BoundingBox completeCityBox;
 
         public Game1()
         {
@@ -52,6 +58,7 @@ namespace XNAseries2
 
             LoadFloorPlan();
             lightDirection.Normalize();
+            SetUpBoundingBoxes();
 
             base.Initialize();
         }
@@ -102,6 +109,18 @@ namespace XNAseries2
             ProcessKeyboard(gameTime);
             float moveSpeed = gameTime.ElapsedGameTime.Milliseconds / 500.0f * gameSpeed;
             MoveForward(ref xwingPosition, xwingRotation, moveSpeed);
+
+            // Bounding sphere for the model.
+            BoundingSphere xwingSpere = new BoundingSphere(xwingPosition, 0.04f);
+            // Check for collision.
+            if (CheckCollision(xwingSpere) != CollisionType.None)
+            {
+                // Reset the model position and decrease the speed.
+                xwingPosition = initialXwingPosition;
+                xwingRotation = Quaternion.Identity;
+                gameSpeed /= 1.1f;
+            }
+
             UpdateCamera();
 
             base.Update(gameTime);
@@ -317,6 +336,50 @@ namespace XNAseries2
         {
             Vector3 addVector = Vector3.Transform(new Vector3(0, 0, -1), rotationQuat);
             position += addVector * speed;
+        }
+
+        private void SetUpBoundingBoxes()
+        {
+            int cityWidth = floorPlan.GetLength(0);
+            int cityLength = floorPlan.GetLength(1);
+
+            // Individual bounding boxes for each building.
+            List<BoundingBox> bbList = new List<BoundingBox>();
+            for (int x = 0; x < cityWidth; x++)
+            {
+                for (int z = 0; z < cityLength; z++)
+                {
+                    int buildingType = floorPlan[x, z];
+                    if (buildingType != 0)
+                    {
+                        int buildingHeight = buildingHeights[buildingType];
+                        Vector3[] buildingPoints = new Vector3[2];
+                        buildingPoints[0] = new Vector3(x, 0, -z); // The lower-back-left point of the building box.
+                        buildingPoints[1] = new Vector3(x + 1, buildingHeight, -z - 1); // The upper-front-right point of the building box.
+                        BoundingBox buildingBox = BoundingBox.CreateFromPoints(buildingPoints);
+                        bbList.Add(buildingBox);
+                    }
+                }
+            }
+            buildingBoundingBoxes = bbList.ToArray();
+
+            // Bounding box for the whole city.
+            Vector3[] boundaryPoints = new Vector3[2];
+            boundaryPoints[0] = new Vector3(0, 0, 0);
+            boundaryPoints[1] = new Vector3(cityWidth, 20, -cityLength);
+            completeCityBox = BoundingBox.CreateFromPoints(boundaryPoints);
+        }
+
+        private CollisionType CheckCollision(BoundingSphere sphere)
+        {
+            for (int i = 0; i < buildingBoundingBoxes.Length; i++)
+                if (buildingBoundingBoxes[i].Contains(sphere) != ContainmentType.Disjoint)
+                    return CollisionType.Building;
+
+            if (completeCityBox.Contains(sphere) != ContainmentType.Contains)
+                return CollisionType.Boundary;
+
+            return CollisionType.None;
         }
     }
 }
