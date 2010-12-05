@@ -17,6 +17,14 @@ The tutorial emphasizes the following topics:
 
 This repository is used to follow after the tutorial step by step.
 
+
+Screenshot
+------------------
+The screenshot shows the game at the final implementation of all 14 steps.
+
+![XNA Flightsimulator](https://github.com/johnjohndoe/XNA_Flightsimulator/raw/master/xna_flightsimulator.png "XNA Flightsimulator")
+
+
 Configuration
 ------------------
 
