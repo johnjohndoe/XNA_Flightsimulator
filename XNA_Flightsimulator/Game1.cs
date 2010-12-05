@@ -75,6 +75,9 @@ namespace XNAseries2
         List<Bullet> bulletList = new List<Bullet>();
         double lastBulletTime = 0;
 
+        Texture2D[] skyboxTextures;
+        Model skyboxModel;
+
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -106,6 +109,7 @@ namespace XNAseries2
             xwingModel = LoadModel("xwing");
             targetModel = LoadModel("target");
             bulletTexture = Content.Load<Texture2D>("bullet");
+            skyboxModel = LoadModel("skybox", out skyboxTextures);
             SetUpCamera();
             SetUpVertices();
         }
@@ -168,6 +172,7 @@ namespace XNAseries2
         {
             device.Clear(ClearOptions.Target | ClearOptions.DepthBuffer, Color.DarkSlateBlue, 1.0f, 0);
 
+            DrawSkybox();
             DrawCity();
             DrawModel();
             DrawTargets();
@@ -553,6 +558,48 @@ namespace XNAseries2
                 device.RenderState.PointSpriteEnable = false;
                 device.RenderState.AlphaBlendEnable = false;
             }
+        }
+
+        private Model LoadModel(string assetName, out Texture2D[] textures)
+        {
+
+            Model newModel = Content.Load<Model>(assetName);
+            textures = new Texture2D[newModel.Meshes.Count];
+            int i = 0;
+            foreach (ModelMesh meshModel in newModel.Meshes)
+                foreach (BasicEffect currentEffect in meshModel.Effects)
+                    textures[i++] = currentEffect.Texture;
+
+            foreach (ModelMesh mesh in newModel.Meshes)
+                foreach (ModelMeshPart meshPart in mesh.MeshParts)
+                    meshPart.Effect = effect.Clone(device);
+
+            return newModel;
+        }
+
+        private void DrawSkybox()
+        {
+            device.SamplerStates[0].AddressU = TextureAddressMode.Clamp;
+            device.SamplerStates[0].AddressV = TextureAddressMode.Clamp;
+
+            device.RenderState.DepthBufferWriteEnable = false;
+            Matrix[] skyboxTransforms = new Matrix[skyboxModel.Bones.Count];
+            skyboxModel.CopyAbsoluteBoneTransformsTo(skyboxTransforms);
+            int i = 0;
+            foreach (ModelMesh meshModel in skyboxModel.Meshes)
+            {
+                foreach (Effect currentEffect in meshModel.Effects)
+                {
+                    Matrix worldMatrix = skyboxTransforms[meshModel.ParentBone.Index] * Matrix.CreateTranslation(xwingPosition);
+                    currentEffect.CurrentTechnique = currentEffect.Techniques["Textured"];
+                    currentEffect.Parameters["xWorld"].SetValue(worldMatrix);
+                    currentEffect.Parameters["xView"].SetValue(viewMatrix);
+                    currentEffect.Parameters["xProjection"].SetValue(projectionMatrix);
+                    currentEffect.Parameters["xTexture"].SetValue(skyboxTextures[i++]);
+                }
+                meshModel.Draw();
+            }
+            device.RenderState.DepthBufferWriteEnable = true;
         }
 
     }
