@@ -21,6 +21,7 @@ namespace XNAseries2
         Matrix viewMatrix;
         Matrix projectionMatrix;
         Texture2D sceneryTexture;
+        Model xwingModel;
         int[,] floorPlan;
         int[] buildingHeights = new int[] { 0, 2, 2, 6, 5, 4 };
 
@@ -51,6 +52,7 @@ namespace XNAseries2
             device = graphics.GraphicsDevice;
             effect = Content.Load<Effect>("effects");
             sceneryTexture = Content.Load<Texture2D>("texturemap");
+            xwingModel = LoadModel("xwing");
             SetUpCamera();
             SetUpVertices();
         }
@@ -81,6 +83,7 @@ namespace XNAseries2
             device.Clear(ClearOptions.Target | ClearOptions.DepthBuffer, Color.DarkSlateBlue, 1.0f, 0);
 
             DrawCity();
+            DrawModel();
 
             base.Draw(gameTime);
         }
@@ -208,6 +211,44 @@ namespace XNAseries2
                 pass.End();
             }
             effect.End();
+        }
+
+        private Model LoadModel(string assetName)
+        {
+            Model newModel = Content.Load<Model>(assetName);
+            // Initialize the model by applying the effect.
+            foreach (ModelMesh mesh in newModel.Meshes)
+            {
+                foreach (ModelMeshPart meshPart in mesh.MeshParts)
+                {
+                    meshPart.Effect = effect.Clone(device);
+                }
+            }
+            return newModel;
+        }
+
+        private void DrawModel()
+        {
+            // Create world matrix to render the model with the following properties.
+            // Down size the model.
+            // Rotate the model by 180 degrees.
+            // Note: XNA takes the negative z-axis as forward.
+            Matrix worldMatrix = Matrix.CreateScale(0.0005f, 0.0005f, 0.0005f) * Matrix.CreateRotationY(MathHelper.Pi) * Matrix.CreateTranslation(new Vector3(19, 12, -5));
+
+            // Render the model parts at their correct positions (based on the bones matrices).
+            Matrix[] xwingTransforms = new Matrix[xwingModel.Bones.Count];
+            xwingModel.CopyAbsoluteBoneTransformsTo(xwingTransforms);
+            foreach (ModelMesh mesh in xwingModel.Meshes)
+            {
+                foreach (Effect currentEffect in mesh.Effects)
+                {
+                    currentEffect.CurrentTechnique = currentEffect.Techniques["Colored"];
+                    currentEffect.Parameters["xWorld"].SetValue(xwingTransforms[mesh.ParentBone.Index] * worldMatrix);
+                    currentEffect.Parameters["xView"].SetValue(viewMatrix);
+                    currentEffect.Parameters["xProjection"].SetValue(projectionMatrix);
+                }
+                mesh.Draw();
+            }
         }
     }
 }
