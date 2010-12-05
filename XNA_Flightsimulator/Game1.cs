@@ -35,6 +35,9 @@ namespace XNAseries2
         int[] buildingHeights = new int[] { 0, 2, 2, 6, 5, 4 };
 
         float gameSpeed = 1.0f;
+        const int maxTargets = 50;
+        Model targetModel;
+        List<BoundingSphere> targetList = new List<BoundingSphere>();
 
         VertexBuffer cityVertexBuffer;
         VertexDeclaration texturedVertexDeclaration;
@@ -59,6 +62,7 @@ namespace XNAseries2
             LoadFloorPlan();
             lightDirection.Normalize();
             SetUpBoundingBoxes();
+            AddTargets();
 
             base.Initialize();
         }
@@ -69,6 +73,7 @@ namespace XNAseries2
             effect = Content.Load<Effect>("effects");
             sceneryTexture = Content.Load<Texture2D>("texturemap");
             xwingModel = LoadModel("xwing");
+            targetModel = LoadModel("target");
             SetUpCamera();
             SetUpVertices();
         }
@@ -132,6 +137,7 @@ namespace XNAseries2
 
             DrawCity();
             DrawModel();
+            DrawTargets();
 
             base.Draw(gameTime);
         }
@@ -372,14 +378,75 @@ namespace XNAseries2
 
         private CollisionType CheckCollision(BoundingSphere sphere)
         {
+            // Buildings.
             for (int i = 0; i < buildingBoundingBoxes.Length; i++)
                 if (buildingBoundingBoxes[i].Contains(sphere) != ContainmentType.Disjoint)
                     return CollisionType.Building;
 
+            // City.
             if (completeCityBox.Contains(sphere) != ContainmentType.Contains)
                 return CollisionType.Boundary;
 
+            // Targets.
+            for (int i = 0; i < targetList.Count; i++)
+            {
+                if (targetList[i].Contains(sphere) != ContainmentType.Disjoint)
+                {
+                    targetList.RemoveAt(i);
+                    i--;
+                    AddTargets();
+
+                    return CollisionType.Target;
+                }
+            }
+
             return CollisionType.None;
+        }
+
+        private void AddTargets()
+        {
+            int cityWidth = floorPlan.GetLength(0);
+            int cityLength = floorPlan.GetLength(1);
+
+            Random random = new Random();
+
+            while (targetList.Count < maxTargets)
+            {
+                int x = random.Next(cityWidth);
+                int z = -random.Next(cityLength);
+                float y = (float)random.Next(2000) / 1000f + 1;
+                float radius = (float)random.Next(1000) / 1000f * 0.2f + 0.01f;
+
+                BoundingSphere newTarget = new BoundingSphere(new Vector3(x, y, z), radius);
+
+                if (CheckCollision(newTarget) == CollisionType.None)
+                    targetList.Add(newTarget);
+            }
+        }
+
+        private void DrawTargets()
+        {
+            for (int i = 0; i < targetList.Count; i++)
+            {
+                Matrix worldMatrix = Matrix.CreateScale(targetList[i].Radius) * Matrix.CreateTranslation(targetList[i].Center);
+
+                Matrix[] targetTransforms = new Matrix[targetModel.Bones.Count];
+                targetModel.CopyAbsoluteBoneTransformsTo(targetTransforms);
+                foreach (ModelMesh modelMesh in targetModel.Meshes)
+                {
+                    foreach (Effect currentEffect in modelMesh.Effects)
+                    {
+                        currentEffect.CurrentTechnique = currentEffect.Techniques["Colored"];
+                        currentEffect.Parameters["xWorld"].SetValue(targetTransforms[modelMesh.ParentBone.Index] * worldMatrix);
+                        currentEffect.Parameters["xView"].SetValue(viewMatrix);
+                        currentEffect.Parameters["xProjection"].SetValue(projectionMatrix);
+                        currentEffect.Parameters["xEnableLighting"].SetValue(true);
+                        currentEffect.Parameters["xLightDirection"].SetValue(lightDirection);
+                        currentEffect.Parameters["xAmbient"].SetValue(0.5f);
+                    }
+                    modelMesh.Draw();
+                }
+            }
         }
     }
 }
