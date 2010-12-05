@@ -22,6 +22,7 @@ namespace XNAseries2
         Matrix projectionMatrix;
         Texture2D sceneryTexture;
         int[,] floorPlan;
+        int[] buildingHeights = new int[] { 0, 2, 2, 6, 5, 4 };
 
         VertexBuffer cityVertexBuffer;
         VertexDeclaration texturedVertexDeclaration;
@@ -56,7 +57,7 @@ namespace XNAseries2
 
         private void SetUpCamera()
         {
-            viewMatrix = Matrix.CreateLookAt(new Vector3(3, 5, 2), new Vector3(2, 0, -1), new Vector3(0, 1, 0));
+            viewMatrix = Matrix.CreateLookAt(new Vector3(20, 13, -5), new Vector3(8, 0, -7), new Vector3(0, 1, 0));
             projectionMatrix = Matrix.CreatePerspectiveFieldOfView(MathHelper.PiOver4, device.Viewport.AspectRatio, 0.2f, 500.0f);
         }
 
@@ -86,33 +87,72 @@ namespace XNAseries2
 
         private void SetUpVertices()
         {
+            int differentBuildings = buildingHeights.Length - 1;
+            float imagesInTexture = 1 + differentBuildings * 2;
+
             int cityWidth = floorPlan.GetLength(0);
             int cityLength = floorPlan.GetLength(1);
-            int imagesInTexture = 11;
+
 
             List<VertexPositionNormalTexture> verticesList = new List<VertexPositionNormalTexture>();
             for (int x = 0; x < cityWidth; x++)
             {
                 for (int z = 0; z < cityLength; z++)
                 {
-                    // If the floor plan contains a 0 for this tile
-                    // then add 2 triangles (6 vertices).
-                    if (floorPlan[x,z] == 0)
-                    {
-                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x, 0, -z),         new Vector3(0, 1, 0), new Vector2(0, 1)));
-                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x, 0, -z - 1),     new Vector3(0, 1, 0), new Vector2(0, 0)));
-                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x + 1, 0, -z),     new Vector3(0, 1, 0), new Vector2(1.0f / imagesInTexture, 1)));
+                    int currentbuilding = floorPlan[x, z];
 
-                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x, 0, -z - 1),     new Vector3(0, 1, 0), new Vector2(0, 0)));
-                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x + 1, 0, -z - 1), new Vector3(0, 1, 0), new Vector2(1.0f / imagesInTexture, 0)));
-                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x + 1, 0, -z),     new Vector3(0, 1, 0), new Vector2(1.0f / imagesInTexture, 1)));
+                    // Floor or ceiling.
+                    verticesList.Add(new VertexPositionNormalTexture(new Vector3(x, buildingHeights[currentbuilding], -z), new Vector3(0, 1, 0), new Vector2(currentbuilding * 2 / imagesInTexture, 1)));
+                    verticesList.Add(new VertexPositionNormalTexture(new Vector3(x, buildingHeights[currentbuilding], -z - 1), new Vector3(0, 1, 0), new Vector2((currentbuilding * 2) / imagesInTexture, 0)));
+                    verticesList.Add(new VertexPositionNormalTexture(new Vector3(x + 1, buildingHeights[currentbuilding], -z), new Vector3(0, 1, 0), new Vector2((currentbuilding * 2 + 1) / imagesInTexture, 1)));
+
+                    verticesList.Add(new VertexPositionNormalTexture(new Vector3(x, buildingHeights[currentbuilding], -z - 1), new Vector3(0, 1, 0), new Vector2((currentbuilding * 2) / imagesInTexture, 0)));
+                    verticesList.Add(new VertexPositionNormalTexture(new Vector3(x + 1, buildingHeights[currentbuilding], -z - 1), new Vector3(0, 1, 0), new Vector2((currentbuilding * 2 + 1) / imagesInTexture, 0)));
+                    verticesList.Add(new VertexPositionNormalTexture(new Vector3(x + 1, buildingHeights[currentbuilding], -z), new Vector3(0, 1, 0), new Vector2((currentbuilding * 2 + 1) / imagesInTexture, 1)));
+
+                    if (currentbuilding != 0)
+                    {
+                        // Front wall.
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x + 1, 0, -z - 1), new Vector3(0, 0, -1), new Vector2((currentbuilding * 2) / imagesInTexture, 1)));
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x, buildingHeights[currentbuilding], -z - 1), new Vector3(0, 0, -1), new Vector2((currentbuilding * 2 - 1) / imagesInTexture, 0)));
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x, 0, -z - 1), new Vector3(0, 0, -1), new Vector2((currentbuilding * 2 - 1) / imagesInTexture, 1)));
+
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x, buildingHeights[currentbuilding], -z - 1), new Vector3(0, 0, -1), new Vector2((currentbuilding * 2 - 1) / imagesInTexture, 0)));
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x + 1, 0, -z - 1), new Vector3(0, 0, -1), new Vector2((currentbuilding * 2) / imagesInTexture, 1)));
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x + 1, buildingHeights[currentbuilding], -z - 1), new Vector3(0, 0, -1), new Vector2((currentbuilding * 2) / imagesInTexture, 0)));
+
+                        // Back wall.
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x + 1, 0, -z), new Vector3(0, 0, 1), new Vector2((currentbuilding * 2) / imagesInTexture, 1)));
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x, 0, -z), new Vector3(0, 0, 1), new Vector2((currentbuilding * 2 - 1) / imagesInTexture, 1)));
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x, buildingHeights[currentbuilding], -z), new Vector3(0, 0, 1), new Vector2((currentbuilding * 2 - 1) / imagesInTexture, 0)));
+
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x, buildingHeights[currentbuilding], -z), new Vector3(0, 0, 1), new Vector2((currentbuilding * 2 - 1) / imagesInTexture, 0)));
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x + 1, buildingHeights[currentbuilding], -z), new Vector3(0, 0, 1), new Vector2((currentbuilding * 2) / imagesInTexture, 0)));
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x + 1, 0, -z), new Vector3(0, 0, 1), new Vector2((currentbuilding * 2) / imagesInTexture, 1)));
+
+                        // Left wall.
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x, 0, -z), new Vector3(-1, 0, 0), new Vector2((currentbuilding * 2) / imagesInTexture, 1)));
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x, 0, -z - 1), new Vector3(-1, 0, 0), new Vector2((currentbuilding * 2 - 1) / imagesInTexture, 1)));
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x, buildingHeights[currentbuilding], -z - 1), new Vector3(-1, 0, 0), new Vector2((currentbuilding * 2 - 1) / imagesInTexture, 0)));
+
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x, buildingHeights[currentbuilding], -z - 1), new Vector3(-1, 0, 0), new Vector2((currentbuilding * 2 - 1) / imagesInTexture, 0)));
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x, buildingHeights[currentbuilding], -z), new Vector3(-1, 0, 0), new Vector2((currentbuilding * 2) / imagesInTexture, 0)));
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x, 0, -z), new Vector3(-1, 0, 0), new Vector2((currentbuilding * 2) / imagesInTexture, 1)));
+
+                        // Right wall.
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x + 1, 0, -z), new Vector3(1, 0, 0), new Vector2((currentbuilding * 2) / imagesInTexture, 1)));
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x + 1, buildingHeights[currentbuilding], -z - 1), new Vector3(1, 0, 0), new Vector2((currentbuilding * 2 - 1) / imagesInTexture, 0)));
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x + 1, 0, -z - 1), new Vector3(1, 0, 0), new Vector2((currentbuilding * 2 - 1) / imagesInTexture, 1)));
+
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x + 1, buildingHeights[currentbuilding], -z - 1), new Vector3(1, 0, 0), new Vector2((currentbuilding * 2 - 1) / imagesInTexture, 0)));
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x + 1, 0, -z), new Vector3(1, 0, 0), new Vector2((currentbuilding * 2) / imagesInTexture, 1)));
+                        verticesList.Add(new VertexPositionNormalTexture(new Vector3(x + 1, buildingHeights[currentbuilding], -z), new Vector3(1, 0, 0), new Vector2((currentbuilding * 2) / imagesInTexture, 0)));
                     }
                 }
             }
 
-            cityVertexBuffer = new VertexBuffer(device, verticesList.Count * VertexPositionNormalTexture.SizeInBytes, BufferUsage.WriteOnly);
 
-            cityVertexBuffer.SetData<VertexPositionNormalTexture>(verticesList.ToArray());
+            cityVertexBuffer = new VertexBuffer(device, verticesList.Count * VertexPositionNormalTexture.SizeInBytes, BufferUsage.WriteOnly); cityVertexBuffer.SetData<VertexPositionNormalTexture>(verticesList.ToArray());
             texturedVertexDeclaration = new VertexDeclaration(device, VertexPositionNormalTexture.VertexElements);
         }
 
@@ -120,11 +160,35 @@ namespace XNAseries2
         {
             // Every 1 indicates a building.
             floorPlan = new int[,]
-            {
-                {0,0,0},
-                {0,1,0},
-                {0,0,0},
-            };
+             {
+              {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
+              {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+              {1,0,0,1,1,0,0,0,1,1,0,0,1,0,1},
+              {1,0,0,1,1,0,0,0,1,0,0,0,1,0,1},
+              {1,0,0,0,1,1,0,1,1,0,0,0,0,0,1},
+              {1,0,0,0,0,0,0,0,0,0,0,1,0,0,1},
+              {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+              {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+              {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+              {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+              {1,0,1,1,0,0,0,1,0,0,0,0,0,0,1},
+              {1,0,1,0,0,0,0,0,0,0,0,0,0,0,1},
+              {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+              {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+              {1,0,0,0,0,1,0,0,0,0,0,0,0,0,1},
+              {1,0,0,0,0,1,0,0,0,1,0,0,0,0,1},
+              {1,0,1,0,0,0,0,0,0,1,0,0,0,0,1},
+              {1,0,1,1,0,0,0,0,1,1,0,0,0,1,1},
+              {1,0,0,0,0,0,0,0,1,1,0,0,0,1,1},
+              {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
+             };
+            // Adding random heights to the buildings.
+            Random random = new Random();
+            int differentBuildings = buildingHeights.Length - 1;
+            for (int x = 0; x < floorPlan.GetLength(0); x++)
+                for (int y = 0; y < floorPlan.GetLength(1); y++)
+                    if (floorPlan[x, y] == 1)
+                        floorPlan[x, y] = random.Next(differentBuildings) + 1;
         }
 
         private void DrawCity()
