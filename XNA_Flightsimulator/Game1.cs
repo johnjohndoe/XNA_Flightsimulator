@@ -31,6 +31,8 @@ namespace XNAseries2
         int[,] floorPlan;
         int[] buildingHeights = new int[] { 0, 2, 2, 6, 5, 4 };
 
+        float gameSpeed = 1.0f;
+
         VertexBuffer cityVertexBuffer;
         VertexDeclaration texturedVertexDeclaration;
 
@@ -97,7 +99,11 @@ namespace XNAseries2
             if (keyState.IsKeyDown(Keys.Escape))
                 this.Exit();
 
+            ProcessKeyboard(gameTime);
+            float moveSpeed = gameTime.ElapsedGameTime.Milliseconds / 500.0f * gameSpeed;
+            MoveForward(ref xwingPosition, xwingRotation, moveSpeed);
             UpdateCamera();
+
             base.Update(gameTime);
         }
 
@@ -280,6 +286,37 @@ namespace XNAseries2
                 }
                 mesh.Draw();
             }
+        }
+
+        private void ProcessKeyboard(GameTime gameTime)
+        {
+            KeyboardState keys = Keyboard.GetState();
+
+            // Prepare the steering rotation for the model.
+            float leftRightRotation = 0;
+
+            float turningSpeed = (float)gameTime.ElapsedGameTime.TotalMilliseconds / 1000.0f;
+            turningSpeed *= 1.6f * gameSpeed;
+            if (keys.IsKeyDown(Keys.Right))
+                leftRightRotation += turningSpeed;
+            if (keys.IsKeyDown(Keys.Left))
+                leftRightRotation -= turningSpeed;
+            float upDownRotation = 0;
+            if (keys.IsKeyDown(Keys.Down))
+                upDownRotation += turningSpeed;
+            if (keys.IsKeyDown(Keys.Up))
+                upDownRotation -= turningSpeed;
+
+            // Update current model rotation with the steering rotation.
+            Quaternion additionalRotation = Quaternion.CreateFromAxisAngle(new Vector3(0, 0, -1), leftRightRotation) * Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), upDownRotation);
+            xwingRotation *= additionalRotation;
+
+        }
+
+        private void MoveForward(ref Vector3 position, Quaternion rotationQuat, float speed)
+        {
+            Vector3 addVector = Vector3.Transform(new Vector3(0, 0, -1), rotationQuat);
+            position += addVector * speed;
         }
     }
 }
